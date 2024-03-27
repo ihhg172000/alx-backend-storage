@@ -8,18 +8,35 @@ from typing import Union, Optional, Callable, Any
 from functools import wraps
 
 
-def count_calls(fn: Callable) -> Callable:
+def count_calls(method: Callable) -> Callable:
     """
-    Function that counts how many times methods of
-    the Cache class are called.
+    A count_calls decorator to store
+    call count for a particular method.
     """
-    @wraps(fn)
+    @wraps(method)
     def wrapper(self, *args, **kwargs):
         """
         Wrapper function.
         """
-        self._redis.incr(fn.__qualname__)
-        return fn(self, *args, **kwargs)
+        self._redis.incr(method.__qualname__)
+        return method(self, *args, **kwargs)
+    return wrapper
+
+
+def call_history(method: Callable) -> Callable:
+    """
+    A call_history decorator to store the history of
+    inputs and outputs for a particular method.
+    """
+    @wraps((method))
+    def wrapper(self, *args, **kwargs):
+        """
+        Wrapper function.
+        """
+        self._redis.rpush(f"{method.__qualname__}:inputs", str(args))
+        output = method(self, *args, **kwargs)
+        self._redis.rpush(f"{method.__qualname__}:outputs", output)
+        return output
     return wrapper
 
 
@@ -32,6 +49,7 @@ class Cache:
         self._redis.flushdb()
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Method that stores the input data in Redis
