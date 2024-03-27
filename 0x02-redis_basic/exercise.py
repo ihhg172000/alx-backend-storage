@@ -28,7 +28,7 @@ def call_history(method: Callable) -> Callable:
     A call_history decorator to store the history of
     inputs and outputs for a particular method.
     """
-    @wraps((method))
+    @wraps(method)
     def wrapper(self, *args, **kwargs):
         """
         Wrapper function.
@@ -38,6 +38,21 @@ def call_history(method: Callable) -> Callable:
         self._redis.rpush(f"{method.__qualname__}:outputs", output)
         return output
     return wrapper
+
+
+def replay(method: Callable):
+    """
+    Function that displays the history of
+    calls of a particular function.
+    """
+    qualname = method.__qualname__
+    r = redis.Redis()
+    inputs = r.lrange(f"{qualname}:inputs", 0, -1)
+    outputs = r.lrange(f"{qualname}:outputs", 0, -1)
+    zipped = list(zip(inputs, outputs))
+    print(f"{qualname} was calld {len(zipped)} times:")
+    for i, o in zipped:
+        print(f"{qualname}(*{i.decode('utf-8')}) -> {o.decode('utf-8')}")
 
 
 class Cache:
