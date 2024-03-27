@@ -5,6 +5,19 @@ exercise.py
 import redis
 from uuid import uuid4 as uuid
 from typing import Union, Optional, Callable, Any
+from functools import wraps
+
+
+def count_calls(fn: Callable) -> Callable:
+    """
+    Function that counts how many times methods of
+    the Cache class are called.
+    """
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        self._redis.incr(fn.__qualname__)
+        return fn(self, *args, **kwargs)
+    return wrapper
 
 
 class Cache:
@@ -15,6 +28,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Method that stores the input data in Redis
@@ -30,10 +44,8 @@ class Cache:
         This fn will be used to convert the data back to the desired format.
         """
         data = self._redis.get(key)
-
         if fn:
             return fn(data)
-
         return data
 
     def get_str(self, key: str) -> str:
