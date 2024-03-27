@@ -45,14 +45,19 @@ def replay(method: Callable):
     Function that displays the history of
     calls of a particular function.
     """
-    qualname = method.__qualname__
     r = redis.Redis()
-    inputs = r.lrange(f"{qualname}:inputs", 0, -1)
-    outputs = r.lrange(f"{qualname}:outputs", 0, -1)
-    zipped = list(zip(inputs, outputs))
-    print(f"{qualname} was calld {len(zipped)} times:")
-    for i, o in zipped:
-        print(f"{qualname}(*{i.decode('utf-8')}) -> {o.decode('utf-8')}")
+    inputs = [
+        input.decode("utf-8")
+        for input in r.lrange(f"{method.__qualname__}:inputs", 0, -1)
+    ]
+    outputs = [
+        output.decode("utf-8")
+        for output in r.lrange(f"{method.__qualname__}:outputs", 0, -1)
+    ]
+    count = r.get(method.__qualname__).decode("utf-8")
+    print(f"{method.__qualname__} was called {count} times:")
+    for i, o in zip(inputs, outputs):
+        print(f"{method.__qualname__}(*{i}) -> {o}")
 
 
 class Cache:
